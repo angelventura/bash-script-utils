@@ -6,6 +6,7 @@
 # Mains Tests
 #
 
+LIB_PATH="$(dirname "$0")";
 BSU_PATH="$(dirname "$0")/../dist"
 BSU_UTIL_LIB="$BSU_PATH/util.lib.sh"
 DATE_FORMAT="+%y/%m/%d %H:%M:%S"
@@ -23,6 +24,8 @@ USAGE="This is to execute the unitary tests."
 batch.started $*;
 
 util.load.library test;
+
+assert.equal  "hash.get" "$(hash.get hpepe un)" "Uno";
 
 
 batch.exitOK;

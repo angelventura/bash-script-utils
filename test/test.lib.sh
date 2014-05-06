@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # $HeadURL$
-# $Id$
+# $id$
 #
 # Unitary test lib
 #

@@ -1,4 +1,0 @@
-
-
-	LOG_ERROR_FILE="/dev/stderr";
-	LOG_OUT_FILE="/dev/stdout";

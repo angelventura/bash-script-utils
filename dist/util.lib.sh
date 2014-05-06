@@ -1,10 +1,14 @@
 #!/bin/bash
 #
-# $HeadURL: http://svn/svn/estrada-gconf/scripts/utils/utils.sh $
-# $Id: utils.sh 30 2009-07-14 13:38:57Z ventura $
+# $HeadURL: $
+# $ utils.lob.sh $
 #
-# Utilidades para los scripts#
+# General utils
 #
+
+# NAME of the executed SCRIPT
+SCRIPT_NAME="$(basename "$0")"
+SCRIPT_PATH="$(dirname "$0")"
 
 BSU_VERSION="beta";
 
@@ -12,47 +16,91 @@ function version(){
 	echo $BSU_VERSION;
 }
 
-
-# PATH 
-SCRIPTS_PATH="$(dirname "$0")"
-
-if  [ "$LIB_PATH" == ""  ] ; then
-	LIB_PATH="$SCRIPTS_PATH";
+if [ "$BSU_PATH" == "" ] ; then 
+	BSU_PATH="$(dirname "$0")""/dist";
+	echo WARN -  BSU_PATH not defined using the default one: $BSU_PATH;
 fi
 
-# NAME of the executed SCRIPT
-SCRIPT_NAME="$(basename "$0")"
+# loading a library
+function util.load.library(){
+    local libraryName="$1"'.lib.sh';
+    local altPath="$2";
+	
+	util.load.file "$libraryName" "$altPath";
 
-#echo path:$SCRIPT_PATH
-
-# Carga una libreria 
-function loadLibrary(){
-    local libraryName=$1'.sh';
-    local librayPath=$LIB_PATH/lib/$libraryName;
-    
-    if [ ! -f "$librayPath" ]; then
-		echo ERROR de instalacion no se encontro la biblioteca "$libraryName" en el path "$librayPath".
-		exit $EXIT_STATE_ERROR;
-    else
-		. "$librayPath"
-    fi    
+	return $?;
 }
 
-# Librerias a cargar ...
-loadLibrary conf;
-
-loadLibrary log;
-loadLibrary batch;
-loadLibrary file_lib;
-
-# Carga la configuracion local
-    
-if [ ! -f "$CONFIGURATION_FILE" ]; then
-	msg="No se ha podido cargar la configuracion local: \"$CONFIGURATION_FILE\"";
-	echo $msg;
-	batch.exitError $msg;
-else
-	. "$CONFIGURATION_FILE"
-	loadLibrary conf_lib;
+# loading a library
+function util.load.config(){
+    local libraryName="$1"'.cfg';
+    local altPath="$2";
 	
-fi    
+	util.load.file "$libraryName" "$altPath";	
+
+	return $?;
+}
+
+# loading a library
+function util.load.file(){
+    local libraryName="$1";
+    local altPath="$2";
+    local librayPath;
+
+	# try the alt path passed in params
+	if [ "$altPath" != "" ] ; then
+		librayPath="$altPath/$libraryName";
+
+		if [ -f "$librayPath" ]; then
+			. "$librayPath"
+			return $?;
+		else
+			# Test if the log.error.out is loaded
+			type log.error.out > /dev/null 2> /dev/null;
+
+			if [ "$?" == "0" ] ; then 
+				log.error.out library $libraryName not found in alternative path [$altPath].
+			else
+				echo ERROR - library $libraryName not found in alternative path [$altPath].
+			fi
+			return 1;
+		fi
+	fi
+
+	# Try the default paths
+    if [ "$LIB_PATH" != "" ] ; then
+		librayPath="$LIB_PATH/$libraryName";
+
+		if [ -f "$librayPath" ]; then
+			. "$librayPath"
+			return $?;
+		fi
+	fi
+
+    librayPath="$BSU_PATH/$libraryName";
+
+    if [ -f "$librayPath" ]; then
+		. "$librayPath"
+		return $?;
+	else
+		# Test if the log.error.out is loaded
+		type log.error.out > /dev/null 2> /dev/null;
+
+		if [ "$?" == "0" ] ; then 
+			log.error.out library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
+		else
+			echo ERROR - library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
+		fi
+
+		return 1;
+	fi	
+}
+
+# laoding main libraries
+util.load.config configuration;
+
+util.load.library error;
+util.load.library log;
+
+util.load.library batch;
+util.load.library file;

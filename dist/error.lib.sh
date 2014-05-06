@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# $HeadURL: http://svn/svn/estrada-gconf/scripts/utils/utils.sh $
-# $Id: utils.sh 30 2009-07-14 13:38:57Z ventura $
+# $HeadURL: $
+# $Id$
 #
-# Eror libs
+# Eror lib
 #
 
 
@@ -62,3 +62,20 @@ function error.isOk(){
 		return $FALSE;
 	fi
 }
+
+function error.isTrue(){
+	local arg="$1"
+
+	if [ "$arg" == "" ] ; then
+		return $FALSE;
+	elif  [ "$arg" == "true" ] ; then
+		return $TRUE;
+	elif  [ "$arg" == "0" ] ; then
+		return $TRUE;
+	elif  [ "$arg" == "TRUE" ] ; then
+		return $TRUE;
+	else
+		return $FALSE;
+	fi
+}
+

@@ -1,0 +1,113 @@
+#!/bin/bash
+#
+# $HeadURL: http://svn/svn/estrada-gconf/scripts/utils/utils.sh $
+# $Id: utils.sh 30 2009-07-14 13:38:57Z ventura $
+#
+# Logs
+#
+
+
+# nivel de log
+# DEBUG, INFO, WARN, ERROR
+#LOG_LEVEL="DEBUG" 
+LOG_LEVEL="INFO" 
+#LOG_LEVEL="WARN" 
+
+# Formato para la fecha de los logs
+DATE_FORMAT="+%y/%m/%d %H:%M:%S"
+
+# Fichero de log
+LOG_ERROR_FILE=$LOG_DIR/stderr.log
+LOG_OUT_FILE=$LOG_DIR/stdout.log
+
+if [ ! -d "$LOG_DIR" ]; then
+	echo FATAL - `date "$DATE_FORMAT"` - El path del directorio de logs: \"$LOG_DIR\" no existe;
+	exit $EXIT_STATE_ERROR;
+fi
+
+# EXCEPTIONS
+#shopt -s expand_aliases
+#alias exception='log.exception $*; return $FALSE;'
+
+
+function log.debug() {
+#	local len=${#FUNCNAME[@]}
+#
+#	for (( i=1; i<${len}; i++ )); do
+#		echo `basename ${BASH_SOURCE[$i]}`:${FUNCNAME[$i]} ${BASH_LINENO[$i-1]} ; 
+#	done
+
+	if [ "$LOG_LEVEL" == "DEBUG" ] ; then 
+		_log $LOG_OUT_FILE debug ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+    fi	
+}
+
+function log.info(){
+    if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] ; then 
+		_log $LOG_OUT_FILE Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+    fi
+}
+
+function log.info.out(){
+#	log.info $*;
+    if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] ; then 
+		_log $LOG_OUT_FILE Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+    fi
+	echo -e Info: $*;
+}
+
+function log.warn(){
+    if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] || [ "$LOG_LEVEL" == "WARN" ] ; then 
+		_log $LOG_OUT_FILE Warn ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+    fi
+}
+
+function log.warn.out(){
+#	log.warn $*;
+    if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] || [ "$LOG_LEVEL" == "WARN" ] ; then 
+		_log $LOG_OUT_FILE Warn ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+    fi
+	echo -e WARN: $*;
+}
+
+function log.error(){	
+    _log $LOG_ERROR_FILE ERROR ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+}
+
+function log.fatal(){
+    _log $LOG_ERROR_FILE FATAL ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+}
+
+function log.error.out(){
+#	log.error $*;
+    _log $LOG_ERROR_FILE ERROR ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+	echo -e ERROR: $*;
+}
+
+function log.exception(){	
+    _log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+
+	local len=${#FUNCNAME[@]}
+
+	# el 0 es el actual ...
+	for (( i=2; i<${len}; i++ )); do
+		_log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
+	done
+
+#	batch.exitError "Exit on exception";
+}
+
+
+function _log(){
+	local inner_log_file="$1";
+
+    if [ "$inner_log_file" ]; then
+		local level="$2";
+		shift 2;
+		echo $level - `date "$DATE_FORMAT"` - $* >> $inner_log_file
+    else
+		echo FATAL - `date "$DATE_FORMAT"`: no hay definido un fichero de error "$inner_log_file" para los logs
+		echo FATAL - `date "$DATE_FORMAT"` - "Batch terminado."
+		exit $EXIT_STATE_ERROR;
+    fi
+}

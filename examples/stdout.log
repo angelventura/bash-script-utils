@@ -1,0 +1,8 @@
+Info - 14/05/06 23:28:54 - batch.started[batch.lib.sh:18]: ---- ---- ---- ---- ---- ---- ---- ----
+Info - 14/05/06 23:28:54 - batch.started[batch.lib.sh:19]: hello.sh Started ....
+Info - 14/05/06 23:28:54 - main[hello.sh:30]: Hello wolrd!
+Info - 14/05/06 23:28:54 - batch.exitOK[batch.lib.sh:65]: hello.sh Finish ok.
+Info - 14/05/06 23:29:24 - batch.started[batch.lib.sh:18]: ---- ---- ---- ---- ---- ---- ---- ----
+Info - 14/05/06 23:29:24 - batch.started[batch.lib.sh:19]: hello.sh Started ....
+Info - 14/05/06 23:29:24 - main[hello.sh:27]: Hello wolrd!
+Info - 14/05/06 23:29:24 - batch.exitOK[batch.lib.sh:65]: hello.sh Finish ok.

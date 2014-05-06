@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# $HeadURL: $
+# $HeadURL$
 # $Id$
 #
 # Unitary test lib

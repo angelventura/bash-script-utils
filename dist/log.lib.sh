@@ -90,8 +90,19 @@ function log.exception(){
 	for (( i=2; i<${len}; i++ )); do
 		_log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
 	done
+}
 
-#	batch.exitError "Exit on exception";
+function log.exception.out(){	
+    _log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+
+	local len=${#FUNCNAME[@]}
+
+	# el 0 es el actual ...
+	for (( i=2; i<${len}; i++ )); do
+		_log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
+	done
+
+	echo -e EXCEPTION: $*;
 }
 
 

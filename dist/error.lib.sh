@@ -63,19 +63,19 @@ function error.isOk(){
 	fi
 }
 
-function error.isTrue(){
-	local arg="$1"
-
-	if [ "$arg" == "" ] ; then
-		return $FALSE;
-	elif  [ "$arg" == "true" ] ; then
-		return $TRUE;
-	elif  [ "$arg" == "0" ] ; then
-		return $TRUE;
-	elif  [ "$arg" == "TRUE" ] ; then
-		return $TRUE;
-	else
-		return $FALSE;
-	fi
-}
+# function error.isTrue(){
+# 	local arg="$1"
+#
+# 	if [ "$arg" == "" ] ; then
+# 		return $FALSE;
+# 	elif  [ "$arg" == "true" ] ; then
+# 		return $TRUE;
+# 	elif  [ "$arg" == "0" ] ; then
+# 		return $TRUE;
+# 	elif  [ "$arg" == "TRUE" ] ; then
+# 		return $TRUE;
+# 	else
+# 		return $FALSE;
+# 	fi
+# }
 

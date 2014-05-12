@@ -8,9 +8,14 @@
 #
 
 function assert.equal(){
-	local name=$1;
-	local arg1=$2;
-	local arg2=$3
+	local name="$1";
+	local arg1="$2";
+	local arg2="$3";
+
+	if [ "$arg2" == "" ] ; then
+		arg1="$1";
+		arg2="$2";		
+	fi
 
 	if [ "$arg1" != "$arg2" ] ; then
 		batch.exitError $name: arguments are not equals \"$arg1\" != \"$arg2\";
@@ -20,9 +25,14 @@ function assert.equal(){
 }
 
 function assert.notequal(){
-	local name=$1;
-	local arg1=$2;
-	local arg2=$3
+	local name="$1";
+	local arg1="$2";
+	local arg2="$3";
+
+	if [ "$arg2" == "" ] ; then
+		arg1="$1";
+		arg2="$2";		
+	fi
 
 	if [ "$arg1" != "$arg2" ] ; then
 		echo Test ok: $name
@@ -32,7 +42,7 @@ function assert.notequal(){
 }
 
 function assert.true(){
-	local command=$1;
+	local command="$1";
 
 	eval $command;
 
@@ -60,6 +70,10 @@ function assert.dir.exists(){
 	local test="$1";
 	local file="$2";
 
+	if [ "$file" == "" ] ; then
+		file="$1";
+	fi
+
 	if [ -d "$file" ]; then 
 		echo Test ok: $test dir exists \"$file\";		
 	else
@@ -71,6 +85,10 @@ function assert.file.exists(){
 	local test="$1";
 	local file="$2";
 
+	if [ "$file" == "" ] ; then
+		file="$1";
+	fi
+
 	if [ -f "$file" ]; then 
 		echo Test ok: $test file exists:\"$file\";		
 	else
@@ -81,6 +99,10 @@ function assert.file.exists(){
 function assert.file.notExists(){
 	local test="$1";
 	local file="$2";
+
+	if [ "$file" == "" ] ; then
+		file="$1";
+	fi
 
 	if [ ! -f "$file" ]; then 
 		echo Test ok: $test do not file exists:\"$file\";		

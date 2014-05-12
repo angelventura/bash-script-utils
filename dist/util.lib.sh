@@ -16,6 +16,14 @@ BSU_VERSION="beta";
 # LIB_PATH: alternative dir to load libraries
 # CONF_PATH: alternative dir to load configuration paths
 
+if [ "$LIB_PATH" == "" ] ; then
+	LIB_PATH="$SCRIPT_PATH/lib";
+fi
+
+if [ "$CONF_PATH" == "" ] ; then
+	CONF_PATH="$SCRIPT_PATH/conf";
+fi
+
 function version(){
 	echo $BSU_VERSION;
 }
@@ -27,13 +35,27 @@ fi
 
 # loading a library
 function util.load.library(){
+	if [ "$1" == "" ] ; then
+		# Test if the log.error.out is loaded
+		type log.exception.out > /dev/null 2> /dev/null;
+
+		if [ "$?" == "0" ] ; then 
+			log.exception.out No library name passed to function.
+		else
+			echo EXCEPTION - No library name passed to function.
+		fi
+
+		return 1;
+	fi
+
     local libraryName="$1"'.lib.sh';
 	
+
 	# Try the default paths
     if [ "$LIB_PATH" != "" ] ; then
 		librayPath="$LIB_PATH/$libraryName";
 
-		if [ -f "$librayPath" ]; then
+		if [ -e "$librayPath" ]; then
 			. "$librayPath"
 			return $?;
 		fi
@@ -41,7 +63,7 @@ function util.load.library(){
 
     librayPath="$BSU_PATH/$libraryName";
 
-    if [ -f "$librayPath" ]; then
+    if [ -e "$librayPath" ]; then
 		. "$librayPath"
 		return $?;
 	else
@@ -49,9 +71,9 @@ function util.load.library(){
 		type log.error.out > /dev/null 2> /dev/null;
 
 		if [ "$?" == "0" ] ; then 
-			log.error.out library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
+			log.error.out library \"$libraryName\" not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
 		else
-			echo ERROR - library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
+			echo ERROR - library \"$libraryName\" not found neither BSU_PATH[$BSU_PATH] nor  LIB_PATH[$LIB_PATH].
 		fi
 
 		return 1;
@@ -60,31 +82,63 @@ function util.load.library(){
 
 # loading a library
 function util.load.config(){
-    local libraryName="$1"'.conf';
+	if [ "$1" == "" ] ; then
+
+		# Test if the log.error.out is loaded
+		type log.exception.out > /dev/null 2> /dev/null;
+
+		if [ "$?" == "0" ] ; then 
+			log.exception.out No configuration file passed to function.
+		else
+			echo EXCEPTION -  No configuration file passed to function.
+		fi
+
+		return 1;
+	fi
+
+    local configurationFile="$1";
+
 
 	# Try the default paths
     if [ "$CONF_PATH" != "" ] ; then
-		librayPath="$CONF_PATH/$libraryName";
+		librayPath="$CONF_PATH/$configurationFile";
 
-		if [ -f "$librayPath" ]; then
+
+		if [ -e "$librayPath" ]; then
 			. "$librayPath"
+
 			return $?;
 		fi
 	fi
 
-    librayPath="$BSU_PATH/$libraryName";
+	# Try the default paths
+    if [ "$LIB_PATH" != "" ] ; then
+		librayPath="$LIB_PATH/$configurationFile";
 
-    if [ -f "$librayPath" ]; then
+
+		if [ -e "$librayPath" ]; then
+			. "$librayPath"
+
+			return $?;
+		fi
+	fi
+
+
+    librayPath="$BSU_PATH/$configurationFile";
+
+    if [ -e "$librayPath" ]; then
 		. "$librayPath"
+		echo loaded $librayPath
+
 		return $?;
 	else
 		# Test if the log.error.out is loaded
 		type log.error.out > /dev/null 2> /dev/null;
 
 		if [ "$?" == "0" ] ; then 
-			log.error.out library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  CONF_PATH[$CONF_PATH].
+			log.error.out configuration file \"$configurationFile\" not found neither BSU_PATH[$BSU_PATH] nor  CONF_PATH[$CONF_PATH].
 		else
-			echo ERROR - library $libraryName not found neither BSU_PATH[$BSU_PATH] nor  CONF_PATH[$CONF_PATH].
+			echo ERROR - configuration file \"$configurationFile\" not found neither BSU_PATH[$BSU_PATH] nor  CONF_PATH[$CONF_PATH].
 		fi
 
 		return 1;
@@ -97,11 +151,24 @@ function util.load.file(){
     local altPath="$2";
     local librayPath;
 
+	if [ "$libraryName" == "" ] ; then
+		# Test if the log.error.out is loaded
+		type log.exception.out > /dev/null 2> /dev/null;
+
+		if [ "$?" == "0" ] ; then 
+			log.exception.out No file name passed to function.;
+		else
+			echo EXCEPTION - No file name passed to function.;
+		fi
+
+		return 1;
+	fi
+
 	# try the alt path passed in params
 	if [ "$altPath" != "" ] ; then
 		librayPath="$altPath/$libraryName";
 
-		if [ -f "$librayPath" ]; then
+		if [ -e "$librayPath" ]; then
 			. "$librayPath"
 			return $?;
 		else
@@ -109,9 +176,9 @@ function util.load.file(){
 			type log.error.out > /dev/null 2> /dev/null;
 
 			if [ "$?" == "0" ] ; then 
-				log.error.out library $libraryName not found in alternative path [$altPath].
+				log.error.out library \"$libraryName\" not found in alternative path [$altPath].
 			else
-				echo ERROR - library $libraryName not found in alternative path [$altPath].
+				echo ERROR - library \"$libraryName\" not found in alternative path [$altPath].
 			fi
 			return 1;
 		fi
@@ -120,9 +187,9 @@ function util.load.file(){
 		type log.error.out > /dev/null 2> /dev/null;
 
 		if [ "$?" == "0" ] ; then 
-			log.error.out library $libraryName not found in alternative path [$altPath].
+			log.error.out library \"$libraryName\" not found in alternative path [$altPath].
 		else
-			echo ERROR - library $libraryName not found in alternative path [$altPath].
+			echo ERROR - library \"$libraryName\" not found in alternative path [$altPath].
 		fi
 
 		return 1;
@@ -131,7 +198,7 @@ function util.load.file(){
 }
 
 # laoding main libraries
-util.load.config configuration;
+util.load.config "configuration.conf";
 
 util.load.library error;
 util.load.library log;

@@ -88,6 +88,7 @@ function hash.add(){
 
 	eval "$name[$key]=$value;";
 
+	return $TRUE;
 #	echo $variable;
 }
 

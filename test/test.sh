@@ -23,7 +23,7 @@ USAGE="This is to execute the unitary tests."
 
 batch.started $*;
 
-util.load.library test;
+util.load.library unit-test
 
 
 #
@@ -93,6 +93,42 @@ hash.iterate.values hpepe echo;
 
 echo KEY,VALUE: -------------
 hash.iterate hpepe echo;
+
+
+#
+# Property Lib
+#
+log.info.out "-------------------------------------------------------";
+log.info.out Testing properties ...
+
+util.load.library prop;
+
+PROP_NAMES="p1:p2:p3:p4:p5";
+
+array.create.value "PROP_ARRAY" ":" "$PROP_NAMES"
+
+prop.load  "propperty1" "$SCRIPT_PATH/propperty1.prop" "PROP_ARRAY";
+prop.load  "propperty2" "$SCRIPT_PATH/propperty2.prop" "PROP_ARRAY";
+
+# echo $(prop.data.get "propperty1" "p1");
+
+# P1
+assert.equal  "prop.get" "$(prop.data.get "propperty1" "p1")" "pa1";
+assert.equal  "prop.get" "$(prop.data.get "propperty1" "p2")" "pb1";
+assert.equal  "prop.get" "$(prop.data.get "propperty1" "p3")" "pc1";
+assert.equal  "prop.get" "$(prop.data.get "propperty1" "p4")" "";
+assert.equal  "prop.get" "$(prop.data.get "propperty1" "p5")" "pe1";
+
+assert.notequal  "!prop.get" "$(prop.data.get "propperty1" "p4")" "pd3";
+
+# P2
+assert.equal  "prop.get" "$(prop.data.get "propperty2" "p1")" "pa2";
+assert.equal  "prop.get" "$(prop.data.get "propperty2" "p2")" "pb2";
+assert.equal  "prop.get" "$(prop.data.get "propperty2" "p3")" "pc2";
+assert.equal  "prop.get" "$(prop.data.get "propperty2" "p4")" "pd2";
+assert.equal  "prop.get" "$(prop.data.get "propperty2" "p5")" "";
+
+assert.notequal  "!prop.get" "$(prop.data.get "propperty2" "p5")" "pe1";
 
 
 

@@ -374,6 +374,37 @@ function file.dir.unlock(){
 }
 
 
+function file.list(){
+	local path="$1";
+	local filter="$2";
+	local separator="$3";
+
+	local files="";
+
+	pushd $path > /dev/null;
+
+	for f in $filter; do
+#		log.error.out F:"$files", P:"$path", f:"$f";
+
+		if [ "$f" == "$filter" ] ; then 
+			echo $files
+			return $TRUE;
+		elif [ "$files" == "" ] ; then 
+			files="$f";		
+		else
+			files="$files":"$f";		
+		fi
+	done
+
+	popd  > /dev/null;
+
+	echo $files
+
+	return $TRUE;
+}
+
+
+
 # http://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash
 
 # ~% FILE="example.tar.gz"

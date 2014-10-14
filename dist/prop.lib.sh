@@ -3,6 +3,16 @@
 # load properties from file
 #
 
+# Test for several includes
+if [ "$__PROP_LIB_SH" != "" ] ; then
+	log.debug Aditional include __PROP_LIB_SH[$__PROP_LIB_SH];
+	return $TRUE;
+else
+	__PROP_LIB_SH="__PROP_LIB_SH";
+	log.debug first include __PROP_LIB_SH[$__PROP_LIB_SH];
+fi
+
+
 util.load.library array
 
 hash.create "_PROP_HASH";
@@ -43,7 +53,7 @@ function prop.data.store(){
 	local fileId="$1";
 	local name="$2";
 	local value="$3";
-
+	
 	local key=$(prop.name.key "$fileId" "$name");
 
 	hash.add "_PROP_HASH" "$key" "$value";
@@ -81,6 +91,7 @@ function prop.load(){
 
 		local array="${arrayName}[@]"
 		# Clear values from precedent charge
+		local item;
 		for item in "${!array}"; do
 
 #			log.debug Previous Value $item:[${!item}];
@@ -97,13 +108,57 @@ function prop.load(){
 		# Store the values
 		for item in "${!array}"; do
 
-#			log.debug Storing Value $item:[${!item}];
-
-			prop.data.store "$fileId" "$item" ${!item};
+			prop.data.store "$fileId" "$item" "${!item}";
 		done;
 		
 		return $TRUE;		
 	fi		
+}
+
+
+# Thos retuns string properties only
+function prop.put(){
+	local fileId="$1";
+	local path="$2";
+	local name="$3";
+	local value="$4";
+
+	if [ ! -e "$path" ] ; then
+		log.exception The property file does not exists [$path].
+		return $FALSE;
+	fi
+
+	local count=`grep -c $name $path`;
+	log.info Count:[$count] [$name] [$value];
+
+# check is a number
+
+	if [ "$count" -eq "0" ] ; then
+		log.info File:[$path], do not have the property:[$name]. Adding ...
+
+		echo "" >> $path;
+		echo "# Auto prop added " >> $path;
+		echo "$name=\"$value\"" >> $path;
+		return $TRUE;
+	else
+
+		log.info Executing sed comand on file $path
+		
+		if ! sed -i".back" "s|^$name.*=.*$|$name=\"$value\"|g" $path ; then 
+			log.exception While executing command [sed -i ".back" "s|^$name.*=.*$|$name=\"$value\"|g" $path]
+			
+			return $FALSE;
+		else
+			local key=$(prop.name.key "$fileId" "$name");
+			prop.data.store "$fileId" "$key" "$value";
+			
+			return $TRUE;		
+		fi
+	fi
+		
+#bash -c 'echo -e "\nserver.id='$1'" >> file.properties'
+
+	
 }
 
 function prop.value.isTrue(){

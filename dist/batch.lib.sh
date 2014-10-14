@@ -6,6 +6,15 @@
 # Batch utils.
 #
 
+# Test for several includes
+if [ "$__BATCH_LIB_SH" != "" ] ; then
+	log.debug Aditional include __BATCH_LIB_SH[$__BATCH_LIB_SH];
+	return $TRUE;
+else
+	__BATCH_LIB_SH="__BATCH_LIB_SH";
+	log.debug first include __BATCH_LIB_SH[$__BATCH_LIB_SH];
+fi
+
 SSH_TIMEOUT=5;
 
 function batch.started(){
@@ -13,10 +22,17 @@ function batch.started(){
 	if [ "$1" == "-h" ] || [ "$1" == "-?"  ] || [ "$1" == "--help"  ] || [ "$1" == "-help" ] ; then
 
 		batch.usage $*;
-		exit $EXIT_STATE_OK;
+		exit $TRUE;
 	else
+
+		local DATE=`date +"%Y-%m-%d_%H-%M"`;
+		LOG_ERROR_FILE="$LOG_PATH/$SCRIPT_NAME-error-$DATE-$$.log";
+		LOG_OUT_FILE="$LOG_PATH/$SCRIPT_NAME-info-$DATE-$$.log";
+
 		log.info "---- ---- ---- ---- ---- ---- ---- ----";
 		log.info $SCRIPT_NAME Started ....
+		log.info " Setting log to $LOG_ERROR_FILE ---- ---- ---- ---- ----";
+		
 	fi
 }
 
@@ -29,16 +45,33 @@ function batch.usage(){
 	else
 		echo -e "Usage: "$USAGE;
 	fi
-	return $EXIT_STATE_OK;
+	return $TRUE;
 }
 
 function batch.exec(){
 	local code;
 	log.debug Executing \""$*\" ...";
+	$*  >> $LOG_OUT_FILE 2>> $LOG_ERROR_FILE
+	code=$?;
+
+	if [ $code == $TRUE ] ; then
+		return $TRUE;
+	else
+		log.debug Error while executin command:\"$*\", code:$code;
+		return $code;
+	fi
+}
+
+# the same as batch.exec bu the stdout is not redirected
+# to the log file
+function batch.exec.get.out(){
+	local code;
+	log.debug Executing \""$*\" ...";
+	# This is the only dif with batch.exec
 	$*  2>> $LOG_ERROR_FILE
 	code=$?;
 	
-	if [ $code == $EXIT_STATE_OK ] ; then
+	if [ $code == $TRUE ] ; then
 		return $TRUE;
 	else
 		log.debug Error while executin command:\"$*\", code:$code;
@@ -52,7 +85,7 @@ function batch.exec.bg(){
 	$*  2>> $LOG_ERROR_FILE &
 	code=$?;
 	
-	if [ $code == $EXIT_STATE_OK ] ; then
+	if [ $code == $TRUE ] ; then
 		log.debug Executiing \""$*\" DONE.";
 		return $TRUE;
 	else
@@ -62,21 +95,21 @@ function batch.exec.bg(){
 }
 
 function batch.exitOK(){
-	log.info $SCRIPT_NAME Finish ok.
-	exit $EXIT_STATE_OK;
+	log.info.out $SCRIPT_NAME Finish ok.
+	exit $TRUE;
 }
 
 function batch.exitError(){
 	log.error $SCRIPT_NAME Finish Error: $*
 	echo $SCRIPT_NAME Finish Error: $*
-	exit  $EXIT_STATE_ERROR;
+	exit  $FALSE;
 }
 
 function batch.exitOnError(){
 	if error.isError $? ; then
 		log.error $SCRIPT_NAME Finish Error: $*
 		echo $SCRIPT_NAME Finish Error: $*
-		exit  $EXIT_STATE_ERROR;
+		exit  $FALSE;
 	fi
 }
 
@@ -100,10 +133,10 @@ function batch.execute.remote.script(){
 	if error.code.exists $message ; then
 		log.debug "Executed command :\"$chaine\" message:\"$message\" result:\"$code:\"".
 		echo $message;
-		return $message;
-#		return $code;
+#		return $message;
+		return $code;
 	else
-		if [ $code == $EXIT_STATE_OK ] ; then 
+		if [ $code == $TRUE ] ; then 
 			log.debug Executed command:\"$chaine\"
 			log.debug Message:\"$message\"
 			log.debug Result:\"$code\"
@@ -111,7 +144,7 @@ function batch.execute.remote.script(){
 			echo $message;
 			return $code;
 		else
-			log.debug Error while executing command:\"$chaine\"
+			log.exception Error while executing command:\"$chaine\"
 			log.debug Message:\"$message\"
 			log.debug Result:\"$code\"
 
@@ -133,7 +166,7 @@ function batch.execute.remote.command(){
 	message=`ssh -o ConnectTimeout=$SSH_TIMEOUT $server $cmd 2>&1`;
 	code=$?;
 
-	if [ $code == $EXIT_STATE_OK ] ; then  
+	if [ $code == $TRUE ] ; then  
 		log.debug Executed command:\"$chaine\", Message:\"$message\",Result:\"$code\"
 	else
 		log.exception.out Executed command:\"$chaine\", Message:\"$message\",Result:\"$code\"
@@ -162,7 +195,7 @@ function batch.backup.dir.create(){
 	
 	if [ ! -d $dir ] ; then
 		log.exception "The specified directory is not a directory or it does not exists. dir:$dir".
-		return $EXIT_STATE_ERROR;
+		return $FALSE;
 	else
 		local stringDate=`date +%y%m%d%H%M%S`
 		local newDir=$_BACKUP_NAME$stringDate;
@@ -172,7 +205,7 @@ function batch.backup.dir.create(){
 		local ret=$?;
 		cd -  > /dev/null;
 
-		if [ $? == $EXIT_STATE_OK ] ; then 
+		if [ $? == $TRUE ] ; then 
 			# movemos todos los ficheros al nuevo directorio
 			cd "$dir";
 
@@ -181,10 +214,10 @@ function batch.backup.dir.create(){
 			cd -  > /dev/null;			
 
 			echo $newDir;
-			return $EXIT_STATE_OK;
+			return $TRUE;
 		else
 			log.exception "The $newDir, hasent been created" ;
-			return $EXIT_STATE_ERROR;
+			return $FALSE;
 		fi
 	fi
 }
@@ -207,9 +240,9 @@ function batch.sync.dirs(){
 		
 		
 		popd > /dev/null;
-		return $EXIT_STATE_OK;
+		return $TRUE;
 	else
-		log.exception The path to sync \"$sourceDir\" do not exists.
-		return $EXIT_STATE_ERROR;
+		log.exception The path to sync [$sourceDir] do not exists.
+		return $FALSE;
 	fi
 }

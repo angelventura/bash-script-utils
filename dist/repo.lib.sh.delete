@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # $HeadURL: http://svn/svn/estrada-gconf/scripts/utils/utils.sh $
-# $Id$
+# $Id: utils.sh 30 2009-07-14 13:38:57Z ventura $
 #
 # Utilidades para el repositorio de ficheros originales
 # Los fichero originales estan en el directorio REPO.

@@ -12,9 +12,9 @@
 
 # Setting the default log level
 if [ "$LOG_LEVEL" == "" ] ; then
-	LOG_LEVEL="DEBUG" 
+	#LOG_LEVEL="DEBUG" 
 	#LOG_LEVEL="INFO" 
-	#LOG_LEVEL="WARN" 
+	LOG_LEVEL="WARN" 
 fi
 
 # Formato para la fecha de los logs
@@ -89,6 +89,17 @@ function log.exception(){
 	# el 0 es el actual ...
 	for (( i=2; i<${len}; i++ )); do
 		_log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
+	done
+}
+
+function log.trace(){	
+    _log $LOG_ERROR_FILE TRACE ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+
+	local len=${#FUNCNAME[@]}
+
+	# el 0 es el actual ...
+	for (( i=2; i<${len}; i++ )); do
+		_log $LOG_ERROR_FILE TRACE ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
 	done
 }
 

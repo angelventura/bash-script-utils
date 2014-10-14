@@ -12,23 +12,21 @@ function file.isInSubtree(){
 	local root="$1";
 	local child="$2";
 	
- 	if [ -f $child ]; then 
-		child=$(file.dirname $child);
-	elif  [ ! -d $child ]; then 
-#		echo "1";
-		return 1;
+ 	if [ -f "$child" ]; then 
+		child="$(file.dirname $child)";
+	elif  [ ! -d "$child" ]; then 
+		return $FALSE;
  	fi
 
-	cd "$child";
+	pushd "$child"  > /dev/null;
 	child=`pwd`;
-	cd -  > /dev/null;
+	popd > /dev/null;
+	
 
 	if [[ $child == "$root"* ]] ; then
-#		echo "0";
-		return 0;
+		return $TRUE;
 	else
-#		echo "1";
-		return 1;
+		return $FALSE;
 	fi
 }
 
@@ -67,9 +65,9 @@ function file.hasExtension(){
 	local realExt="$(file.ext $FILE)";
 
 	if [ "$EXT" == ".""$realExt" ] || [ "$realExt" == "$EXT" ] ; then
-		return $EXIT_STATE_OK;		
+		return $TRUE;		
 	else
-		return $EXIT_STATE_ERROR;
+		return $FALSE;
 	fi
 }
 
@@ -80,7 +78,7 @@ function file.size.2(){
 	local message;
 	local code;
 
-	message=$(batch.exec du -sk $file);
+	message=$(batch.exec.get.out du -sk $file);
 	code=$?;
 
 	if error.isOk $code; then
@@ -98,14 +96,15 @@ function file.size(){
 	local message;
 	local code;
 
-	message=$(batch.exec wc $file);
+	message=$(batch.exec.get.out wc -c $file);
 	code=$?;
 
 	if error.isOk $code; then
 		set $message;
-		echo $3;
+		echo $1;
  		return $TRUE;
 	else
+
  		echo "-";
  		return $FALSE;
  	fi 
@@ -118,7 +117,8 @@ function file.size.human(){
 	local message;
 	local code;
 
-	message=$(batch.exec du -sh $file);
+	message=$(batch.exec.get.out du -sh $file);
+
 	code=$?;
 
 	if error.isOk $code; then
@@ -144,7 +144,7 @@ function file.dir.iterate(){
 	local function="$2";
 
 	if [ ! -d "$dir" ] ; then
-		log.exception The dir:\"$dir\" does not exists.
+		log.exception.out The dir:\"$dir\" does not exists.
 	else
 #		cd $dir;
 		pushd $dir  > /dev/null;
@@ -153,6 +153,8 @@ function file.dir.iterate(){
 			if [[ "$file" == "*" ]] ; then
 				log.debug The directory:\"$dir\" is empty.
 				break;
+			elif [[ "$file" == "$LOCK_FILE_NAME" ]] ; then
+				log.debug Avoid $LOCK_FILE_NAME;
 			else
 #				log.debug "file.dir.iterate on file:\"$file\",pwd:"`pwd`;
 
@@ -185,7 +187,7 @@ function file.dir.dirs.iterate(){
 	local function="$2";
 
 	if [ ! -d "$dir" ] ; then
-		log.error The dir:\"$dir\" does not exists.
+		log.exception The dir:\"$dir\" does not exists.
 	else
 		pushd $dir > /dev/null;
 		local file;
@@ -209,12 +211,41 @@ function file.dir.dirs.iterate(){
 	fi;
 }
 
+# For the dir passed in parameter, iteates only over
+# the files included into the parent dir
+# and call the function, the second parameter.
+# If the directory is empty the funcion is not called.
+function file.dir.files.iterate(){
+	local dir="$1";
+	local function="$2";
+
+	if [ ! -d "$dir" ] ; then
+		log.exception The dir:\"$dir\" does not exists.
+	else
+		pushd $dir > /dev/null;
+		local file;
+
+		for file in * ; do
+			if [[ "$file" == "*" ]] ; then
+				log.debug The directory:\"$dir\" is empty.
+				break;
+			elif [ -f "$file" ] ; then
+				$function $file
+			fi
+		done
+		
+		popd > /dev/null;
+	fi;
+}
+
+
 function replace.white.spaces.iterator(){
 	local file="$1"
 
 	file.move.changeFileWihiteEspaces "$file";
 
-	return $?;
+	# Do not stops iteration ....
+	return $TRUE;
 }
 
 function file.move.changeFileWihiteEspaces(){
@@ -222,27 +253,35 @@ function file.move.changeFileWihiteEspaces(){
 	
 	log.debug file:\"$file\";
 
-	local replcedName=${file// /_};
-	replcedName=${replcedName//\'/_};
-	replcedName=${replcedName//\[/_};
-	replcedName=${replcedName//\]/_};
+#	local fileName="$(file.name $file)"
+#	local extenxion="$(file.ext $file)"
 
-	replcedName=${replcedName//\(/_};
-	replcedName=${replcedName//\)/_};
-	replcedName=${replcedName//\&/_};
+	local replcedName=${file// /-};
+#	local replcedName=${fileName// /-};
+#	replcedName=${replcedName//./-};
+	replcedName=${replcedName//_/-};
+	replcedName=${replcedName//\'/-};
+	replcedName=${replcedName//\[/-};
+	replcedName=${replcedName//\]/-};
 
+	replcedName=${replcedName//\(/-};
+	replcedName=${replcedName//\)/-};
+	replcedName=${replcedName//\&/-};
+
+#	file="$replcedName$extenxion";
 	
 	if [ "$file" != "$replcedName" ] ; then 
 		mv "$file" "$replcedName";
 		
 		if [ $? ] ; then 
-			log.info Moved file from:\"$file\" to \"$replcedName\";
+			log.debug Moved file from:\"$file\" to \"$replcedName\";
+			return $FALSE;
 		else
-			log.error Movin file from:\"$file\" to \"$replcedName\";
+			log.error Moving file from:\"$file\" to \"$replcedName\";
+			return $TRUE;			
 		fi
 	fi
-
-	return $EXIT_STATE_OK;
+	return $TRUE;
 }
 
 function file.dir.changeFileWihiteEspaces(){
@@ -302,7 +341,7 @@ function file.dir.lock(){
 	local lockInfo="$2";
 
 	if [ ! -d "$dir" ] ; then	
-		log.error The folder to lock is not a directory $dir;
+		log.exception The folder to lock is not a directory $dir;
 		return $FALSE;
 	else
 		local lockFile=$dir/$LOCK_FILE_NAME;
@@ -341,7 +380,7 @@ function file.dir.unlock(){
 	local lockInfo="$2";
 
 	if [ ! -d "$dir" ] ; then	
-		log.error The folder to un-lock is not a directory $dir;
+		log.exception The folder to un-lock is not a directory $dir;
 		return $FALSE;
 	else
 		local lockFile=$dir/$LOCK_FILE_NAME;
@@ -403,6 +442,18 @@ function file.list(){
 	return $TRUE;
 }
 
+function file.symlink.create(){
+	local originalFile="$1";
+	local targetFile="$2";
+	
+	if ! batch.exec ln -s "$originalFile" "$targetFile" ; then
+		log.exception Error making a symbolick link from:[$originalFile], to:[$outputFilePath];
+		return $FALSE;
+	else
+		log.info Symbolig link created from:[$originalFile], to:[$outputFilePath];
+		return $TRUE;
+	fi
+}
 
 
 # http://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash

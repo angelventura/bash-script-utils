@@ -103,6 +103,7 @@ log.info.out Testing properties ...
 
 util.load.library prop;
 
+
 PROP_NAMES="p1:p2:p3:p4:p5";
 
 array.create.value "PROP_ARRAY" ":" "$PROP_NAMES"
@@ -130,6 +131,25 @@ assert.equal  "prop.get" "$(prop.data.get "propperty2" "p5")" "";
 
 assert.notequal  "!prop.get" "$(prop.data.get "propperty2" "p5")" "pe1";
 
+prop.put  "$SCRIPT_PATH/propperty3.prop" "name" "value";
+
+
+
+util.load.library prop;
+
+
+prop.put  "$SCRIPT_PATH/propperty3.prop" "name" "value";
+
+#
+# PUT PROPERTIES
+value=`date "+%Y%m%d %H%M%S"`;
+assert.true "prop.put  "$SCRIPT_PATH/propperty3.prop" "name" "$value"";
+prop.put  "$SCRIPT_PATH/propperty3.prop" "name" "$value";
+
+
+
+
+batch.exitOK;
 
 
 batch.exitOK;

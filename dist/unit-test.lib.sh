@@ -59,6 +59,7 @@ function assert.false(){
 	eval $command;
 	
 	if [ $? -eq 0 ]; then
+		log.error $command: Returns ok, error attended.;
 		batch.exitError $command: Returns ok, error attended.;
 	else
 		echo Test ok: false \($command\);

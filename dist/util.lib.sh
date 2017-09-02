@@ -11,7 +11,7 @@ SCRIPT_NAME="$(basename "$0")"
 SCRIPT_PATH="$(dirname "$0")"
 
 BSU_VERSION="beta";
-
+#BSU_PATH="$(dirname "${BASH_SOURCE[0]}")"
 
 # LIB_PATH: alternative dir to load libraries
 # CONF_PATH: alternative dir to load configuration paths

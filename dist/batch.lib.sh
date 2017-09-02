@@ -16,6 +16,16 @@ else
 fi
 
 SSH_TIMEOUT=5;
+BATCH_HEADLESS="$FALSE";
+
+BATCH_HEADLESS_ARG="-headless";
+BATCH_EXCLUSIVE_ARG="-exclusive";
+
+BATCH_REMOTE_LOG_ARG="-remoteLog";
+
+
+BATCH_SCRIPT_START_DATE=`date "$DATE_FORMAT"`;
+BATCH_SCRIPT_START_TIME_IN_SECONS=$(date +"%s")
 
 function batch.started(){
 
@@ -24,16 +34,140 @@ function batch.started(){
 		batch.usage $*;
 		exit $TRUE;
 	else
-
 		local DATE=`date +"%Y-%m-%d_%H-%M"`;
-		LOG_ERROR_FILE="$LOG_PATH/$SCRIPT_NAME-error-$DATE-$$.log";
-		LOG_OUT_FILE="$LOG_PATH/$SCRIPT_NAME-info-$DATE-$$.log";
 
-		log.info "---- ---- ---- ---- ---- ---- ---- ----";
-		log.info $SCRIPT_NAME Started ....
-		log.info " Setting log to $LOG_ERROR_FILE ---- ---- ---- ---- ----";
-		
+#		log.info.out LOG_LEVEL: $LOG_LEVEL;
+#		log.info.out LOG_ERROR_FILE: $LOG_ERROR_FILE;
+#		log.info.out LOG_OUT_FILE: $LOG_OUT_FILE;
+
+ 		LOG_ERROR_FILE="$LOG_PATH/$SCRIPT_NAME-error-$DATE-$$.log";
+ 		LOG_OUT_FILE="$LOG_PATH/$SCRIPT_NAME-info-$DATE-$$.log";
+		SCRIPT_PID_FILE="$PID_PATH/$SCRIPT_NAME-$$.pid";
+		LOG_PID_FILE="$PID_PATH/$SCRIPT_NAME-pid-$$.log";
+
+		if [[ $@ == *"$BATCH_HEADLESS_ARG"* ]] ; then
+			BATCH_HEADLESS="$TRUE";
+		else
+			BATCH_HEADLESS="$FALSE";
+		fi
+
+		if [[ $@ == *"$BATCH_REMOTE_LOG_ARG"* ]] ; then
+			REMOTE_LOG=$TRUE;
+			REMOTE_LOG_HOST_NAME=`hostname`;
+		else
+			REMOTE_LOG=$FALSE;
+		fi
+
+
+		# Before creating all the files in $PID_PATH/
+		if [[ $@ == *"$BATCH_EXCLUSIVE_ARG"* ]] ; then
+			local files=`ls $PID_PATH/$SCRIPT_NAME* 2> /dev/null`;
+
+			if [  "$files" != "" ] ; then
+				batch.exitError "EXCLUSIVE mode. Another process [$SCRIPT_NAME] is running, check the path:[$PID_PATH]"				
+			fi
+		fi
+
+
+
+# 		echo " ";
+#  		echo "---- ---- ---- ---- ---- ---- ---- ----";
+#  		echo " $BATCH_SCRIPT_START_DATE - Started : [$$] $SCRIPT_NAME $* ";
+#  		echo "   ";
+#  		echo " Log level $LOG_LEVEL ";
+#  		echo " Setting stdout log to $LOG_OUT_FILE ";
+#  		echo " Setting stderr log to $LOG_ERROR_FILE";
+#  		echo "---- ---- ---- ---- ---- ---- ---- ----";
+# 		echo " ";
+
+		local msg="---- ---- ---- ---- ---- ---- ---- ----\n\
+ - Date : $BATCH_SCRIPT_START_DATE \n\
+ - Started : [$$] $SCRIPT_NAME $* \n\
+ - Log level $LOG_LEVEL \n\
+ - Setting stdout log to $LOG_OUT_FILE \n\
+ - Setting stderr log to $LOG_ERROR_FILE \n\
+---- ---- ---- ---- ---- ---- ---- ----\n\
+";
+
+		if [ "$BATCH_HEADLESS" != "$TRUE" ] ; then
+			echo -e "$msg"
+		fi
+		echo -e "$msg" > "$SCRIPT_PID_FILE"
+		echo -e "$msg" > "$LOG_ERROR_FILE"
+		echo -e "$msg" > "$LOG_OUT_FILE"
+		echo -e "$msg" > "$LOG_PID_FILE"
+
 	fi
+}
+
+function batch.exitOK(){
+	local msg="\n\
+---- ---- ---- ---- ---- ---- ---- ----\n\
+ Finish OK: [$$] $SCRIPT_NAME $* Finish OK.\n\
+\n\
+[ Started: $BATCH_SCRIPT_START_DATE, laps: $(batch.display.Laps.from.start)]\n\
+---- ---- ---- ---- ---- ---- ---- ----";
+	
+	if [ "$BATCH_HEADLESS" != "$TRUE" ] ; then
+		echo -e "$msg"
+	fi
+
+	echo -e "$msg" >> "$SCRIPT_PID_FILE"
+	echo -e "$msg" >> "$LOG_ERROR_FILE"
+	echo -e "$msg" >> "$LOG_OUT_FILE"
+	echo -e "$msg" >> "$LOG_PID_FILE"
+	
+	if [ -e "$SCRIPT_PID_FILE" ] ; then
+#		mv "$SCRIPT_PID_FILE" "$LOG_PATH"; 
+		rm "$SCRIPT_PID_FILE"; 
+	fi
+
+	if [ -e "$LOG_PID_FILE" ] ; then
+#		mv "$LOG_PID_FILE" "$LOG_PATH"; 
+		rm "$LOG_PID_FILE" ; 
+	fi
+
+# Remove the logs
+	rm "$LOG_ERROR_FILE"
+	rm "$LOG_OUT_FILE"
+
+
+	exit $TRUE;
+}
+
+function batch.exitError(){
+	log.error.out $SCRIPT_NAME Finish Error: $*
+
+	local msg="\n\
+---- ---- ---- ---- ---- ---- ---- ----\n\
+ [$$] $SCRIPT_NAME \n\
+\n\
+ Lap : $(batch.display.Laps.from.start)\n\
+ Star: $BATCH_SCRIPT_START_DATE\n\
+ End :    `date "$DATE_FORMAT"`\n\
+\n\
+ FINISH ON ERROR: [$*]\n\
+---- ---- ---- ---- ---- ---- ---- ----"; 
+
+#	log.error.out "$msg";
+	if [ "$BATCH_HEADLESS" != "$TRUE" ] ; then
+		echo -e "$msg"
+	fi
+	echo -e "$msg" >> "$LOG_ERROR_FILE"
+	echo -e "$msg" >> "$LOG_OUT_FILE"
+
+	if [ -e "$SCRIPT_PID_FILE" ] ; then
+		echo -e "$msg" >> "$SCRIPT_PID_FILE"
+		mv "$SCRIPT_PID_FILE" "$LOG_PATH"; 
+	fi
+
+	if [ -e "$LOG_PID_FILE" ] ; then
+		echo -e "$msg" >> "$LOG_PID_FILE"
+		mv "$LOG_PID_FILE" "$LOG_PATH"; 
+	fi
+
+
+	exit  $FALSE;
 }
 
 function batch.usage(){
@@ -45,19 +179,47 @@ function batch.usage(){
 	else
 		echo -e "Usage: "$USAGE;
 	fi
+
+	echo -e $BATCH_EXCLUSIVE_ARG: Exclusive mode if another command is running this will exit;
+	echo -e $BATCH_HEADLESS_ARG: No process information will be written in the stdout;
+
 	return $TRUE;
 }
 
 function batch.exec(){
 	local code;
-	log.debug Executing \""$*\" ...";
-	$*  >> $LOG_OUT_FILE 2>> $LOG_ERROR_FILE
+	local scaped_args;
+
+	for var in "$@" ; do
+		scaped_args="$scaped_args"" ""\"$var\""
+	done
+	
+	log.info Executing [$scaped_args] ...;
+	
+	eval $scaped_args  >> $LOG_OUT_FILE 2>> $LOG_ERROR_FILE
+
 	code=$?;
 
 	if [ $code == $TRUE ] ; then
 		return $TRUE;
 	else
-		log.debug Error while executin command:\"$*\", code:$code;
+		log.exception Error while executin command: $scaped_args, code:$code;
+		return $code;
+	fi
+}
+
+function batch.exec.noescape(){
+	
+	log.info ++++++++COMMAND: $* ;
+	
+	$*  >> $LOG_OUT_FILE 2>> $LOG_ERROR_FILE
+	
+	code=$?;
+
+	if [ $code == $TRUE ] ; then
+		return $TRUE;
+	else
+		log.exception Error while executin command: $*, code:$code;
 		return $code;
 	fi
 }
@@ -66,43 +228,69 @@ function batch.exec(){
 # to the log file
 function batch.exec.get.out(){
 	local code;
-	log.debug Executing \""$*\" ...";
+	local scaped_args;
+	
+	for var in "$@" ; do
+		scaped_args="$scaped_args"" ""\"$var\""
+	done
+
+
+#	log.debug Executing \""$*\" ...";
+	log.debug Executing [$scaped_args] ...;
+
 	# This is the only dif with batch.exec
-	$*  2>> $LOG_ERROR_FILE
+	eval $scaped_args  2>> $LOG_ERROR_FILE
 	code=$?;
 	
 	if [ $code == $TRUE ] ; then
 		return $TRUE;
 	else
-		log.debug Error while executin command:\"$*\", code:$code;
+		log.exception Error while executin command: $scaped_args, code:$code;
 		return $code;
 	fi
 }
 
 function batch.exec.bg(){
 	local code;
-	log.debug Executiing in background \""$*\" ...";
-	$*  2>> $LOG_ERROR_FILE &
+
+	local scaped_args;
+	for var in "$@" ; do
+		scaped_args="$scaped_args"" ""\"$var\""
+	done
+
+	log.debug Executing in background [$scaped_args] ...;
+
+#	$*  2>> $LOG_ERROR_FILE &
+	eval $scaped_args  2>> $LOG_ERROR_FILE &
 	code=$?;
 	
 	if [ $code == $TRUE ] ; then
-		log.debug Executiing \""$*\" DONE.";
+		# log.debug Executiing \""$*\" DONE.";
 		return $TRUE;
 	else
-		log.exception Command:\"$*\";
+		log.exception Error while executin command: $scaped_args, code:$code;
 		return $FALSE;
 	fi
 }
 
-function batch.exitOK(){
-	log.info.out $SCRIPT_NAME Finish ok.
-	exit $TRUE;
+function batch.display.Laps.from.start(){
+	local laps=$(( $(date +"%s") - $BATCH_SCRIPT_START_TIME_IN_SECONS))
+
+	echo $(displaytime $laps);
 }
 
-function batch.exitError(){
-	log.error $SCRIPT_NAME Finish Error: $*
-	echo $SCRIPT_NAME Finish Error: $*
-	exit  $FALSE;
+# http://unix.stackexchange.com/questions/27013/displaying-seconds-as-days-hours-mins-seconds
+function displaytime {
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+  [[ $D > 0 ]] && printf '%d d. ' $D
+  [[ $H > 0 ]] && printf '%d h. ' $H
+  [[ $M > 0 ]] && printf '%d min. ' $M
+  [[ $D > 0 || $H > 0 || $M > 0 ]] && printf ' '
+  printf '%d sec.\n' $S
 }
 
 function batch.exitOnError(){
@@ -144,7 +332,7 @@ function batch.execute.remote.script(){
 			echo $message;
 			return $code;
 		else
-			log.exception Error while executing command:\"$chaine\"
+			log.info Command return error code, command:\"$chaine\"
 			log.debug Message:\"$message\"
 			log.debug Result:\"$code\"
 
@@ -169,7 +357,7 @@ function batch.execute.remote.command(){
 	if [ $code == $TRUE ] ; then  
 		log.debug Executed command:\"$chaine\", Message:\"$message\",Result:\"$code\"
 	else
-		log.exception.out Executed command:\"$chaine\", Message:\"$message\",Result:\"$code\"
+		log.exception Executed command:\"$chaine\", Message:\"$message\",Result:\"$code\"
 	fi
 
 	return $code;
@@ -186,7 +374,7 @@ function batch.backup.iterator(){
 #	log.debug RET2:\"$file\";
 	if [ ! -d $file ];then 
 		log.debug Moviendo el fichero $file;
-		batch.exec mv $file $newDir;
+		batch.exec mv "$file" "$newDir";
 	fi
 }
 
@@ -246,3 +434,14 @@ function batch.sync.dirs(){
 		return $FALSE;
 	fi
 }
+
+# function batch.args.contains() {
+# 	local arg="$1";
+#
+# #	if [[ $@ == *'-disableVenusBld'* ]]
+# 	if [[ "$ARGS_ARGS" == *"$arg"* ]] ; then
+# 		return $TRUE;
+# 	else
+# 		return $FALSE;
+# 	fi
+# }

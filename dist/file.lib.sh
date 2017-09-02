@@ -62,13 +62,22 @@ function file.name(){
 function file.hasExtension(){
 	local FILE="$1";
 	local EXT="$2";
-	local realExt="$(file.ext $FILE)";
 
-	if [ "$EXT" == ".""$realExt" ] || [ "$realExt" == "$EXT" ] ; then
+	if [[ "$FILE" == *"$EXT" ]] ; then
 		return $TRUE;		
 	else
 		return $FALSE;
 	fi
+
+# 	local realExt="$(file.ext $FILE)";
+#
+# 	log.info.out [$realExt] [$FILE] [$EXT];
+#
+# 	if [ "$EXT" == ".""$realExt" ] || [ "$realExt" == "$EXT" ] ; then
+# 		return $TRUE;		
+# 	else
+# 		return $FALSE;
+# 	fi
 }
 
 # /path/file.ext return /path
@@ -78,7 +87,7 @@ function file.size.2(){
 	local message;
 	local code;
 
-	message=$(batch.exec.get.out du -sk $file);
+	message=$(batch.exec.get.out du -sk "$file");
 	code=$?;
 
 	if error.isOk $code; then
@@ -93,21 +102,36 @@ function file.size.2(){
 
 function file.size(){
 	local file="$1";
+	local error="-";
+
+	if [ ! -e "$file" ] ; then
+		echo "$error";
+		return $FALSE;
+	fi
+
 	local message;
-	local code;
+ 	local code;
 
-	message=$(batch.exec.get.out wc -c $file);
-	code=$?;
+	message=`stat --printf="%s\n" "$file"`;
+# 	message=$(batch.exec.get.out wc -c "$file");
+ 	code=$?;
 
-	if error.isOk $code; then
-		set $message;
-		echo $1;
- 		return $TRUE;
-	else
-
- 		echo "-";
- 		return $FALSE;
- 	fi 
+ 	if error.isOk $code; then
+ 		set $message;
+ 		echo $1;
+  		return $TRUE;
+ 	else
+		message=`stat -f "%z" "$file"`;
+ 		code=$?;
+ 		if error.isOk $code; then
+ 			set $message;
+ 			echo $1;
+  			return $TRUE;
+		else
+  			echo "$error";
+  			return $FALSE;
+		fi
+  	fi 
 }
 
 
@@ -117,7 +141,7 @@ function file.size.human(){
 	local message;
 	local code;
 
-	message=$(batch.exec.get.out du -sh $file);
+	message=$(batch.exec.get.out du -sh "$file");
 
 	code=$?;
 
@@ -146,8 +170,7 @@ function file.dir.iterate(){
 	if [ ! -d "$dir" ] ; then
 		log.exception.out The dir:\"$dir\" does not exists.
 	else
-#		cd $dir;
-		pushd $dir  > /dev/null;
+		pushd "$dir"  > /dev/null;
 		local file;
 		for file in * ; do
 			if [[ "$file" == "*" ]] ; then
@@ -156,22 +179,13 @@ function file.dir.iterate(){
 			elif [[ "$file" == "$LOCK_FILE_NAME" ]] ; then
 				log.debug Avoid $LOCK_FILE_NAME;
 			else
-#				log.debug "file.dir.iterate on file:\"$file\",pwd:"`pwd`;
-
-# 				local ret="$($function $file)";
-# 				if [ "$ret" != "" ] ;then 
-# 					echo $ret;
-# 				fi
-#				echo -e $($function $file)
-#				$function $file >> $LOG_OUT_FILE 2>> $LOG_ERROR_FILE
-#				./sendToPublish.sh 
 				if ! $function "$file" ; then 
+					popd > /dev/null;
 					return $FALSE;
 				fi				
 			fi
 		done
 		
-#		cd -  > /dev/null;
 		popd > /dev/null;
 	fi;
 
@@ -222,7 +236,7 @@ function file.dir.files.iterate(){
 	if [ ! -d "$dir" ] ; then
 		log.exception The dir:\"$dir\" does not exists.
 	else
-		pushd $dir > /dev/null;
+		pushd "$dir" > /dev/null;
 		local file;
 
 		for file in * ; do
@@ -230,7 +244,7 @@ function file.dir.files.iterate(){
 				log.debug The directory:\"$dir\" is empty.
 				break;
 			elif [ -f "$file" ] ; then
-				$function $file
+				$function "$file"
 			fi
 		done
 		
@@ -248,25 +262,45 @@ function replace.white.spaces.iterator(){
 	return $TRUE;
 }
 
+function file.move(){
+	local orig="$1"
+	local dest="$2"
+
+	if [ ! -e "$orig" ] ; then
+		log.exception.out The origin file does not exists [$orig].
+		return $FALSE;
+	fi
+
+#	if [ ! -e "$dest" ] ; then
+#		log.exception.out The destination file does not exists [$dest].
+#		return $FALSE;
+#	fi
+
+	if ! batch.exec mv "$orig" "$dest" ; then
+		log.exception.out While moving from $orig to $dest.
+		return $FALSE;
+	else
+		log.debug moved $orig to $dest.
+		return $TRUE;
+	fi	
+}
+
+
 function file.move.changeFileWihiteEspaces(){
 	local file="$1"
 	
 	log.debug file:\"$file\";
 
-#	local fileName="$(file.name $file)"
-#	local extenxion="$(file.ext $file)"
-
 	local replcedName=${file// /-};
-#	local replcedName=${fileName// /-};
-#	replcedName=${replcedName//./-};
-	replcedName=${replcedName//_/-};
-	replcedName=${replcedName//\'/-};
-	replcedName=${replcedName//\[/-};
-	replcedName=${replcedName//\]/-};
 
-	replcedName=${replcedName//\(/-};
-	replcedName=${replcedName//\)/-};
-	replcedName=${replcedName//\&/-};
+	replcedName=${replcedName//-/_};
+	replcedName=${replcedName//\'/_};
+	replcedName=${replcedName//\[/_};
+	replcedName=${replcedName//\]/_};
+
+	replcedName=${replcedName//\(/_};
+	replcedName=${replcedName//\)/_};
+	replcedName=${replcedName//\&/_};
 
 #	file="$replcedName$extenxion";
 	
@@ -274,7 +308,7 @@ function file.move.changeFileWihiteEspaces(){
 		mv "$file" "$replcedName";
 		
 		if [ $? ] ; then 
-			log.debug Moved file from:\"$file\" to \"$replcedName\";
+			log.info Moved file from:\"$file\" to \"$replcedName\";
 			return $FALSE;
 		else
 			log.error Moving file from:\"$file\" to \"$replcedName\";
@@ -292,13 +326,21 @@ function file.dir.changeFileWihiteEspaces(){
 	return $?;
 }
 
+function file.dir.files.changeFileWihiteEspaces(){
+	local dir="$1"
+	
+	file.dir.files.iterate  "$dir" replace.white.spaces.iterator
+
+	return $?;
+}
+
 function file.dir.verifyCreate(){
 	local dir="$1"
 	
 	if [ -d "$dir" ] ; then
 		return $TRUE;
 	else
-		if batch.exec mkdir $dir ; then
+		if batch.exec mkdir "$dir" ; then
 			return $TRUE;
 		else
 			log.error The dir:$dir can not be create and do not exists.;
@@ -325,7 +367,7 @@ function file.dir.isLocked(){
 		log.error The folder to lock is not a directory $dir;
 		return $FALSE;
 	else
-		local lockFile=$dir/$LOCK_FILE_NAME;
+		local lockFile="$dir/$LOCK_FILE_NAME";
 		
 		if [  -f "$lockFile" ] ; then	
 			return $TRUE;
@@ -344,7 +386,7 @@ function file.dir.lock(){
 		log.exception The folder to lock is not a directory $dir;
 		return $FALSE;
 	else
-		local lockFile=$dir/$LOCK_FILE_NAME;
+		local lockFile="$dir/$LOCK_FILE_NAME";
 		
 		if [ "$lockInfo" == "" ] ; then
 			lockInfo=$(file.dir.lock.info);
@@ -356,8 +398,8 @@ function file.dir.lock(){
 			log.error Already locked $dir ["$lockFile"];
 			return $FALSE;
 		else
-			log.debug writing "$lockInfo" into $lockFile;
-			echo "$lockInfo" > $lockFile;
+			log.debug writing "$lockInfo" into "$lockFile";
+			echo "$lockInfo" > "$lockFile";
 			
 			if error.isOk $? ; then
 				if [  -f "$lockFile" ] ; then	
@@ -383,14 +425,14 @@ function file.dir.unlock(){
 		log.exception The folder to un-lock is not a directory $dir;
 		return $FALSE;
 	else
-		local lockFile=$dir/$LOCK_FILE_NAME;
+		local lockFile="$dir/$LOCK_FILE_NAME";
 		
 		log.debug lockFile:$lockFile;
 
 		if [  -f "$lockFile" ] ; then	
 			if [ "$lockInfo" != "" ] ; then
 				# testing if the look info is the same
-				local currentInfo=`cat $lockFile`;
+				local currentInfo=`cat "$lockFile"`;
 
 				if [ "$currentInfo" != "$lockInfo" ] ; then
 					log.warn For dir: $dir, the current lock info:$currentInfo is not the same as the passed $lockInfo;
@@ -398,11 +440,12 @@ function file.dir.unlock(){
 				fi
 			fi
 
-			if batch.exec rm $lockFile ; then 
+#			if batch.exec rm "$lockFile" ; then 
+			if  rm "$lockFile" ; then 
 				log.debug Dir unlocked: $dir;
 				return $TRUE;
 			else
-				log.error Dir dir: $dir, can not be unlocked because file:$lockFile can not be removed;				
+				log.error Dir dir: $dir, can not be unlocked because file:[$lockFile] can not be removed;				
 				return $FALSE;				
 			fi
 		else
@@ -412,6 +455,29 @@ function file.dir.unlock(){
 	fi
 }
 
+
+function file.rm.file(){
+	local file="$1";
+
+	if [ ! -e  "$file" ] ; then
+		log.error.out The file [$file] does not exits ...
+		return $TRUE;
+	else
+		local code;
+		
+		rm "$file";
+
+		code=$?;
+
+		if [ -e  "$file" ] ; then
+			log.error.out The file [$file] can not be deleted code[$code];
+			return $FALSE;
+		else
+			log.info.out File [$file] deleted. code[$code];
+			return $TRUE;
+		fi
+	fi
+}
 
 function file.list(){
 	local path="$1";
@@ -454,6 +520,7 @@ function file.symlink.create(){
 		return $TRUE;
 	fi
 }
+
 
 
 # http://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash

@@ -35,24 +35,38 @@ fi
 #shopt -s expand_aliases
 #alias exception='log.exception $*; return $FALSE;'
 
+LAST_ERROR="";
+
+NEW_LINE="\\\n";
+# REMOTE_LOG=$FALSE;
 
 function log.debug() {
 	if [ "$LOG_LEVEL" == "DEBUG" ] ; then 
-		_log $LOG_OUT_FILE debug ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+		_log "$LOG_OUT_FILE" debug ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
     fi	
 }
 
 function log.info(){
     if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] ; then 
-		_log $LOG_OUT_FILE Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+		_log "$LOG_OUT_FILE" Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
     fi
 }
 
 function log.info.out(){
     if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] ; then 
-		_log $LOG_OUT_FILE Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
+		_log "$LOG_OUT_FILE" Info ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
     fi
-	echo -e Info: $*;
+
+    if [ "$LOG_PID_FILE" != "" ] ; then 
+		_log "$LOG_PID_FILE" Info $*
+    fi
+
+	if [ "$REMOTE_LOG" == "$TRUE" ] ; then
+		echo -e [$REMOTE_LOG_HOST_NAME] Info - `date "$DATE_FORMAT"` - $* "$NEW_LINE";
+	else
+		echo -e Info - `date "$DATE_FORMAT"` - $*;
+	fi
+#	echo -e `date "$DATE_FORMAT"` - $*;
 }
 
 function log.warn(){
@@ -65,23 +79,46 @@ function log.warn.out(){
     if [ "$LOG_LEVEL" == "DEBUG" ] || [ "$LOG_LEVEL" == "INFO" ] || [ "$LOG_LEVEL" == "WARN" ] ; then 
 		_log $LOG_OUT_FILE Warn ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
     fi
-	echo -e WARN: $*;
+
+    if [ "$LOG_PID_FILE" != "" ] ; then 
+		_log "$LOG_PID_FILE" WARN $*
+    fi
+
+	if [ "$REMOTE_LOG" == "$TRUE" ] ; then
+		echo -e [$REMOTE_LOG_HOST_NAME] WARN - `date "$DATE_FORMAT"` - ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $* "$NEW_LINE";
+	else
+		echo -e WARN - `date "$DATE_FORMAT"` - ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*;
+	fi
 }
 
 function log.error(){	
+	LAST_ERROR="$*"
     _log $LOG_ERROR_FILE ERROR ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
 }
 
 function log.fatal(){
+	LAST_ERROR="$*"
     _log $LOG_ERROR_FILE FATAL ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
 }
 
 function log.error.out(){
+	LAST_ERROR="$*"
     _log $LOG_ERROR_FILE ERROR ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
-	echo -e ERROR: $*;
+
+    if [ "$LOG_PID_FILE" != "" ] ; then 
+		_log "$LOG_PID_FILE" ERROR $*
+    fi
+
+	if [ "$REMOTE_LOG" == "$TRUE" ] ; then		
+		echo -e [$REMOTE_LOG_HOST_NAME] ERROR - `date "$DATE_FORMAT"` - ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $* "$NEW_LINE";
+	else
+		echo -e ERROR - `date "$DATE_FORMAT"` - ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*;
+	fi
 }
 
 function log.exception(){	
+	LAST_ERROR="$*"
+
     _log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
 
 	local len=${#FUNCNAME[@]}
@@ -104,6 +141,8 @@ function log.trace(){
 }
 
 function log.exception.out(){	
+	LAST_ERROR="$*"
+
     _log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*
 
 	local len=${#FUNCNAME[@]}
@@ -113,7 +152,11 @@ function log.exception.out(){
 		_log $LOG_ERROR_FILE EXCEPTION ${FUNCNAME[$i]}[`basename ${BASH_SOURCE[$i]}`:${BASH_LINENO[$i-1]}]; 
 	done
 
-	echo -e EXCEPTION: $*;
+	if [ "$REMOTE_LOG" == "$TRUE" ] ; then		
+		echo -e [$REMOTE_LOG_HOST_NAME] EXCEPTION - `date "$DATE_FORMAT"` -  ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $* "$NEW_LINE";
+	else
+		echo -e EXCEPTION - `date "$DATE_FORMAT"` -  ${FUNCNAME[1]}[`basename ${BASH_SOURCE[1]}`:${BASH_LINENO[0]}]: $*;
+	fi
 }
 
 

@@ -3,6 +3,12 @@
 # Utilities for Arrays and Hasn maps
 #
 
+# http://stackoverflow.com/questions/26925905/in-bash-test-if-associative-array-is-declared
+# doesn't actually create an associative array immediately; it just sets an attribute on the name FOO which allows you to assign to the name as an associative array. The array itself doesn't exist until the first assignment.		
+
+# Here we store the name of the declared arrays
+declare -gA _DECLARED_ARRAYS;
+
 function array.add(){
 	local name="$1";
 	local value="$2";
@@ -11,12 +17,31 @@ function array.add(){
 		eval "$name+=( $value );";
 	else
 		eval "declare -ga $name=( $value );";
+		# adding a new declared array
+		eval "_DECLARED_ARRAYS[\"$name\"]=\"$name\";";
 	fi
 
 	return $TRUE;
 #
 #	echo $name;
 }
+
+# function array.size(){
+# 	local name="$1";
+# 	local s1="${#";
+# 	local s2="[@]}"
+
+# 	log.info.out NAME::::: $name;
+
+# 	local string="$s1""$name""$s2";
+
+# 	log.info.out SIZE::::: $string;
+# 	eval "$string";
+
+# 	log.info.out RET::::: $ret;
+
+# 	return $TRUE;
+# }
 
 function array.create(){
 	local name="$1";
@@ -28,6 +53,8 @@ function array.create(){
 		log.warn Already existing array:$name. $*. Another object with the same name already exits.;
 	else
 		eval "declare -ga $name;";
+		# adding a new declared array
+		eval "_DECLARED_ARRAYS[\"$name\"]=\"$name\";";
 	fi
 
 	return $TRUE;
@@ -52,9 +79,23 @@ function array.create.value(){
 function array.exists(){
 	local name="$1";
 
-	if [ -v $name ] ; then
+#	if [[ -v "$name" ]] ; then
+#		return $TRUE;
+#	else
+#		return $FALSE;
+#	fi
+
+	if [ "$name" == "_DECLARED_ARRAYS" ] ; then
+		log.exception.out Asking for array exists:_DECLARED_ARRAYS ...
+		return $TRUE;
+	fi
+
+	if eval "test \${_DECLARED_ARRAYS[$name]+_} " ; then
+		# log.info.out EXISTS: $name;
+				
 		return $TRUE;
 	else
+		# log.info.out NOT EXISTS: $name;
 		return $FALSE;
 	fi
 }
@@ -91,7 +132,7 @@ function array.iterate(){
 }
 
 function hash.exists(){
-	array.exists $*;
+	array.exists "$1";
 
 	return $?;
 }
@@ -116,7 +157,8 @@ function hash.add(){
 	fi
 
 	if ! hash.exists "$name" ; then
-		eval "declare -gA $name;";
+#		eval "declare -gA $name;";
+		hash.create "$name"
 	fi
 
 	eval "$name[\"$key\"]=\"$value\";";
@@ -125,17 +167,44 @@ function hash.add(){
 #	echo $variable;
 }
 
+function hash.remove(){
+	local name="$1";
+	local key="$2";
+
+	if [ "$key" == "" ] ; then
+		log.exception $name adding a empty key.
+		return $FALSE;
+	fi
+
+	if ! hash.exists "$name" ; then
+		log.exception The hash $name does not exists.
+		return $FALSE;
+	fi
+
+	eval "unset $name[\"$key\"];";
+
+	return $TRUE;
+}
+
 function hash.create(){
 	local name="$1";
 	
-	if ! hash.exists $name ; then
-		eval "declare -gA $name;";
-		log.debug Created hash: $name;
+	if ! hash.exists "$name" ; then
+		# http://stackoverflow.com/questions/10806357/associative-arrays-are-local-by-default
+		# Associative arrays
+		eval "declare -gA \"$name\"";
+
+#		hash.add "_DECLARED_ARRAYS" "$name" "$name";
+		eval "_DECLARED_ARRAYS[\"$name\"]=\"$name\";";
+# http://stackoverflow.com/questions/26925905/in-bash-test-if-associative-array-is-declared
+# doesn't actually create an associative array immediately; it just sets an attribute on the name FOO which allows you to assign to the name as an associative array. The array itself doesn't exist until the first assignment.		
+
+		# log.info.out Created hash: $name;
 	fi
 
-	if ! hash.exists $name ; then
-		log.exception.out Fatal error creationg hash [$name];
-		batch.exitError Fatal error creationg hash [$name];
+	if ! hash.exists "$name" ; then
+		log.exception.out Fatal error creating hash [$name];
+		batch.exitError Fatal error creating hash [$name];
 	fi
 
 	return $TRUE;
@@ -199,11 +268,12 @@ function hash.key.exist(){
 	local name="$1";
 	local key="$2";
 
-	if ! hash.exists $name ; then
+	if ! hash.exists "$name" ; then
 		log.exception The hash $name is nor defined. $*.
 		return $FALSE;
 	else
 		if eval "test \${$name[$key]+_} " ; then
+			echo OKOKOKOK
 			return $TRUE;
 		else
 			return $FALSE;
@@ -222,6 +292,35 @@ function hash.get(){
 	echo $value;
 }
 
+# Print all the keys into one string ussing the separator passed in param.
+function hash.keys.print(){
+	local name="$1";
+	local separator="$2";
+
+
+	if ! hash.exists "$name" ; then
+		log.exception The hash $name is nor defined. $*;
+		echo "";
+	else
+		local array;
+		local prevKey="";
+		eval array=\( \${!${name}[@]} \);
+		for i in "${!array[@]}" ; do
+
+			local key="${array[${i}]}";
+
+			if [ "$prevKey" != "" ] ; then
+				printf "$separator$key";
+			else
+				printf "$key";
+			fi
+
+			prevKey=$key
+		done
+	fi		
+	return $TRUE;
+}
+
 # Admite los argumentos de la function dentro de la function
 # y tambien como parametros adicionales en la llamada a la function
 function hash.iterate.keys(){
@@ -235,7 +334,7 @@ function hash.iterate.keys(){
 #	echo array args2:[$*];
 
 
-	if ! hash.exists $name ; then
+	if ! hash.exists "$name" ; then
 		log.exception The hash $name is nor defined. $*;
 	else
 #http://bash.cumulonim.biz/FullBashFAQ.html
@@ -262,7 +361,7 @@ function hash.iterate.values(){
 	local name="$1";
 	local function="$2";
 
-	if ! hash.exists $name ; then
+	if ! hash.exists "$name" ; then
 		log.exception The hash $name is nor defined. $*;
 	else
  		local array="${name}[@]"
@@ -286,7 +385,7 @@ function hash.iterate(){
 	local name="$1";
 	local function="$2";
 
-	if ! hash.exists $name ; then
+	if ! hash.exists "$name" ; then
 		log.exception The hash $name is nor defined. $*;
 	else
 		local keyref="${name}[@]";

@@ -20,11 +20,32 @@ function system.proceses.exists(){
 	local message;
 	local ret;
 
-	message=$(batch.exec ps $pid);
-	
-	ret=$?;
+#	message=$(batch.exec ps $pid);
+#	
+#	ret=$?;
+#
+#	return $ret;
 
-	return $ret;
+	# The ps command will hide the root process to the normal users.
+	# This is necesary to tne v_nginx process executed as root to know if the 
+	# process ares working
+	if [ -e /proc/$pid ] ; then
+		return $TRUE;
+	else
+		return $FALSE;
+	fi
+
+# 	local PROCESS="$1";
+# 	PIDS=`ps cax | grep $PROCESS | grep -o '^[ ]*[0-9]*'`
+# 	if [ -z "$PIDS" ]; then
+# 		# echo "Process not running." 1>&2
+# 		return $FALSE;
+# 	else
+# #		for PID in $PIDS; do
+# #			echo $PID
+# #		done
+# 		return $TRUE;
+# 	fi
 }
 
 function system.pid(){
@@ -35,13 +56,18 @@ function system.pid(){
 # true is the url is running
 function system.http.isRunning(){	
 	local url="$1";
+	local userAgent="$2";
 	local message;
 	local ret;
 
-	if batch.exec "$CURL_CMD $url" 1>/dev/null ; then 
+	if [ "$userAgent" == "" ] ; then
+		userAgent="BSU TESTS user agent";
+	fi
+	
+	if batch.exec "$CURL_CMD" -A "$userAgent" "$url" 1>/dev/null ; then 
 		return $TRUE;
 	else
-		log.exception "$CURL_CMD $url";
+		log.exception "$CURL_CMD" "$url";
 		return $FALSE;
 	fi
 }

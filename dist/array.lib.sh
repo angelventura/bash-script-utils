@@ -140,7 +140,7 @@ function hash.exists(){
 function hash.name(){
 	local name="$1";
 	
-	echo ${name//[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]/_};
+	echo ${name//[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]/_};
 #	echo ${name//[!a-zA-Z]/_};
 
 	return $TRUE;
@@ -273,7 +273,6 @@ function hash.key.exist(){
 		return $FALSE;
 	else
 		if eval "test \${$name[$key]+_} " ; then
-			echo OKOKOKOK
 			return $TRUE;
 		else
 			return $FALSE;

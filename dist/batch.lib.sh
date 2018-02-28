@@ -36,14 +36,26 @@ function batch.started(){
 	else
 		local DATE=`date +"%Y-%m-%d_%H-%M"`;
 
-#		log.info.out LOG_LEVEL: $LOG_LEVEL;
-#		log.info.out LOG_ERROR_FILE: $LOG_ERROR_FILE;
-#		log.info.out LOG_OUT_FILE: $LOG_OUT_FILE;
+		if [ "$1" == "-v" ] || [ "$1" == "-verbose"  ] || [ "$1" == "--verbose"  ]  ; then
 
- 		LOG_ERROR_FILE="$LOG_PATH/$SCRIPT_NAME-error-$DATE-$$.log";
- 		LOG_OUT_FILE="$LOG_PATH/$SCRIPT_NAME-info-$DATE-$$.log";
-		SCRIPT_PID_FILE="$PID_PATH/$SCRIPT_NAME-$$.pid";
-		LOG_PID_FILE="$PID_PATH/$SCRIPT_NAME-pid-$$.log";
+			#		log.info.out LOG_LEVEL: $LOG_LEVEL;
+			#		log.info.out LOG_ERROR_FILE: $LOG_ERROR_FILE;
+			#		log.info.out LOG_OUT_FILE: $LOG_OUT_FILE;
+
+			LOG_ERROR_FILE="/dev/stderr";
+			LOG_OUT_FILE="/dev/stdout";
+
+			LOG_LEVEL="DEBUG"
+			
+		else
+ 			LOG_ERROR_FILE="$LOG_PATH/$SCRIPT_NAME-error-$DATE-$$.log";
+ 			LOG_OUT_FILE="$LOG_PATH/$SCRIPT_NAME-info-$DATE-$$.log";
+
+		fi
+			
+			SCRIPT_PID_FILE="$PID_PATH/$SCRIPT_NAME-$$.pid";
+			LOG_PID_FILE="$PID_PATH/$SCRIPT_NAME-pid-$$.log";
+			
 
 		if [[ $@ == *"$BATCH_HEADLESS_ARG"* ]] ; then
 			BATCH_HEADLESS="$TRUE";

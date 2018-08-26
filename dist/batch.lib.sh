@@ -139,9 +139,14 @@ function batch.exitOK(){
 		rm "$LOG_PID_FILE" ; 
 	fi
 
-# Remove the logs
-	rm "$LOG_ERROR_FILE"
-	rm "$LOG_OUT_FILE"
+    # Remove the logs If they are files
+	if [ -f "$LOG_ERROR_FILE" ] ; then
+		rm "$LOG_ERROR_FILE"
+	fi
+
+	if [ -f "$LOG_OUT_FILE" ] ; then
+		rm "$LOG_OUT_FILE"
+	fi
 
 
 	exit $TRUE;
